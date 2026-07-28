@@ -2,6 +2,12 @@
 
 import { createClient } from "@/lib/supabase/client";
 
+/** Base URL for auth redirects — always the current origin so it works on
+ *  localhost and every deployed domain without depending on an env var. */
+function redirectBase() {
+  return typeof window !== "undefined" ? window.location.origin : "";
+}
+
 /**
  * Ensures there's a signed-in Supabase user, creating an anonymous (guest)
  * session if none exists, and writes/updates the matching `users` row so the
@@ -30,14 +36,32 @@ export async function ensureGuestSession(displayName: string): Promise<string> {
   return user.id;
 }
 
+/** Sends a passwordless magic-link / OTP to `email`. Works with zero extra
+ *  Supabase setup (email auth is on by default). `next` is where to land after. */
+export async function signInWithEmail(email: string, next = "/studio") {
+  const supabase = createClient();
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${redirectBase()}/auth/callback?next=${encodeURIComponent(next)}`,
+    },
+  });
+  if (error) throw error;
+}
+
 /** Kicks off Google OAuth, returning to `next` after the callback. */
 export async function signInWithGoogle(next: string) {
   const supabase = createClient();
-  const base =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (typeof window !== "undefined" ? window.location.origin : "");
   await supabase.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo: `${base}/auth/callback?next=${encodeURIComponent(next)}` },
+    options: {
+      redirectTo: `${redirectBase()}/auth/callback?next=${encodeURIComponent(next)}`,
+    },
   });
+}
+
+/** Signs the current user out and reloads to a clean state. */
+export async function signOut() {
+  const supabase = createClient();
+  await supabase.auth.signOut();
 }

@@ -56,21 +56,48 @@ export default function Home() {
         Click a creator&apos;s link, land in their space, and join an open room
         to chat in real time.
       </p>
-      <Link
-        href="/ananya"
+      <div
         style={{
-          background: "var(--violet)",
-          color: "#fff",
-          fontWeight: 800,
-          fontSize: 16,
-          padding: "14px 26px",
-          borderRadius: 999,
-          textDecoration: "none",
-          boxShadow: "0 12px 28px -8px rgba(124,58,237,.5)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+          width: "100%",
+          maxWidth: 300,
         }}
       >
-        Visit Ananya&apos;s Space →
-      </Link>
+        <Link
+          href="/studio"
+          style={{
+            background: "var(--violet)",
+            color: "#fff",
+            fontWeight: 800,
+            fontSize: 16,
+            padding: "14px 26px",
+            borderRadius: 999,
+            textDecoration: "none",
+            textAlign: "center",
+            boxShadow: "0 12px 28px -8px rgba(124,58,237,.5)",
+          }}
+        >
+          Create your space
+        </Link>
+        <Link
+          href="/ananya"
+          style={{
+            background: "var(--card)",
+            color: "var(--ink)",
+            fontWeight: 700,
+            fontSize: 15,
+            padding: "13px 26px",
+            borderRadius: 999,
+            textDecoration: "none",
+            textAlign: "center",
+            border: "1px solid var(--line2)",
+          }}
+        >
+          Explore a live space →
+        </Link>
+      </div>
     </main>
   );
 }
