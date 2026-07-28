@@ -26,6 +26,8 @@ export interface AppUser {
   is_guest: boolean;
 }
 
+export type AttachmentType = "image" | "video" | "file";
+
 export interface Message {
   id: number;
   room_id: string;
@@ -33,6 +35,9 @@ export interface Message {
   body: string;
   is_creator: boolean;
   created_at: string;
+  attachment_url: string | null;
+  attachment_type: AttachmentType | null;
+  attachment_name: string | null;
 }
 
 /** Message joined with its author's display name, as rendered in the chat. */

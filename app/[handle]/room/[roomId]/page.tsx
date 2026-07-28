@@ -38,7 +38,9 @@ export default async function RoomPage({
 
   const { data: rows } = await supabase
     .from("messages")
-    .select("id, room_id, user_id, body, is_creator, created_at, users(display_name)")
+    .select(
+      "id, room_id, user_id, body, is_creator, created_at, attachment_url, attachment_type, attachment_name, users(display_name)",
+    )
     .eq("room_id", params.roomId)
     .order("created_at", { ascending: false })
     .limit(30);
@@ -53,6 +55,9 @@ export default async function RoomPage({
       body: m.body,
       is_creator: m.is_creator,
       created_at: m.created_at,
+      attachment_url: m.attachment_url ?? null,
+      attachment_type: m.attachment_type ?? null,
+      attachment_name: m.attachment_name ?? null,
       author_name: m.users?.display_name ?? null,
     }))
     .reverse();
