@@ -180,7 +180,11 @@ export function SpaceClient({
     signInWithGoogle(`/${creator.handle}/room/${pendingRoom.id}`);
   }
 
-  async function createRoom(name: string, seconds: number | null) {
+  async function createRoom(
+    name: string,
+    seconds: number | null,
+    capacity: number | null,
+  ) {
     setCreating(true);
     try {
       const closes_at =
@@ -193,6 +197,7 @@ export function SpaceClient({
           kind: seconds == null ? "permanent" : "temporary",
           closes_at,
           is_open: true,
+          capacity,
         })
         .select()
         .single();
@@ -200,6 +205,8 @@ export function SpaceClient({
 
       // Seed a creator welcome message so the room isn't empty on arrival.
       if (user) {
+        const { ensureProfile } = await import("@/lib/auth-client");
+        await ensureProfile(); // creators need a users row before posting
         await supabase.from("messages").insert({
           room_id: data.id,
           user_id: user.id,
@@ -397,7 +404,9 @@ export function SpaceClient({
                   key={room.id}
                   room={room}
                   now={now}
+                  isOwner={isOwner}
                   onEnter={() => enterRoom(room)}
+                  onFull={() => showToast("This room is full — try again soon")}
                 />
               ))}
             </div>

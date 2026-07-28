@@ -4,7 +4,14 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { AppShell } from "@/components/AppShell";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ChatClient } from "./chat-client";
-import type { Creator, Room, ChatMessage } from "@/lib/types";
+import type {
+  Creator,
+  Room,
+  ChatMessage,
+  Poll,
+  PollVoteRow,
+  PollState,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +45,9 @@ export default async function RoomPage({
 
   const { data: rows } = await supabase
     .from("messages")
-    .select("id, room_id, user_id, body, is_creator, created_at, users(display_name)")
+    .select(
+      "id, room_id, user_id, body, is_creator, created_at, attachment_url, attachment_type, attachment_name, users(display_name)",
+    )
     .eq("room_id", params.roomId)
     .order("created_at", { ascending: false })
     .limit(30);
@@ -53,9 +62,34 @@ export default async function RoomPage({
       body: m.body,
       is_creator: m.is_creator,
       created_at: m.created_at,
+      attachment_url: m.attachment_url ?? null,
+      attachment_type: m.attachment_type ?? null,
+      attachment_name: m.attachment_name ?? null,
       author_name: m.users?.display_name ?? null,
     }))
     .reverse();
+
+  // Active poll (if any) + its current votes.
+  const { data: pollRow } = await supabase
+    .from("polls")
+    .select("*")
+    .eq("room_id", params.roomId)
+    .eq("is_open", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let initialPoll: PollState | null = null;
+  if (pollRow) {
+    const { data: voteRows } = await supabase
+      .from("poll_votes")
+      .select("option_index, user_id")
+      .eq("poll_id", (pollRow as Poll).id);
+    initialPoll = {
+      poll: pollRow as Poll,
+      votes: (voteRows ?? []) as PollVoteRow[],
+    };
+  }
 
   return (
     <AppShell>
@@ -63,6 +97,7 @@ export default async function RoomPage({
         creator={creator as Creator}
         room={room as Room}
         initialMessages={initialMessages}
+        initialPoll={initialPoll}
       />
     </AppShell>
   );
