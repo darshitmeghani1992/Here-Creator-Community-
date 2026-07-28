@@ -80,6 +80,7 @@ export function PollCard({
         {poll.options.map((opt, i) => {
           const pct = total ? Math.round((counts[i] / total) * 100) : 0;
           const mine = myVote === i;
+          const img = poll.option_images?.[i];
           return (
             <button
               key={i}
@@ -123,15 +124,32 @@ export function PollCard({
                     color: "var(--ink)",
                     display: "flex",
                     alignItems: "center",
-                    gap: 7,
+                    gap: 8,
+                    minWidth: 0,
                   }}
                 >
                   {mine && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--violet)" strokeWidth="3">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--violet)" strokeWidth="3" style={{ flex: "none" }}>
                       <path d="M20 6 9 17l-5-5" />
                     </svg>
                   )}
-                  {opt}
+                  {img ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={img}
+                      alt={opt}
+                      style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover", flex: "none" }}
+                    />
+                  ) : null}
+                  <span
+                    style={{
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {opt || (img ? "Image" : "")}
+                  </span>
                 </span>
                 <span
                   style={{

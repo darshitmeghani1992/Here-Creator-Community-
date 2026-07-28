@@ -48,12 +48,20 @@ export interface ChatMessage extends Message {
 
 export interface Poll {
   id: string;
-  room_id: string;
+  room_id: string | null; // null = space-level poll (shown in the Polls tab)
+  space_id: string | null;
   creator_id: string | null;
   question: string;
   options: string[];
+  option_images: string[] | null; // parallel to options; "" = no image
   is_open: boolean;
   created_at: string;
+}
+
+/** One option in the create-poll form. */
+export interface PollOptionInput {
+  label: string;
+  image: string | null;
 }
 
 export interface PollVoteRow {
