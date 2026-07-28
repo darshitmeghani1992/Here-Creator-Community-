@@ -92,7 +92,7 @@ export default async function RoomPage({
   }
 
   return (
-    <AppShell>
+    <AppShell theme={(creator as Creator).theme}>
       <ChatClient
         creator={creator as Creator}
         room={room as Room}

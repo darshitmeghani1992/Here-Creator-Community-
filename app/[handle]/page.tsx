@@ -59,7 +59,7 @@ export default async function SpacePage({
   }
 
   return (
-    <AppShell>
+    <AppShell theme={(creator as Creator).theme}>
       <SpaceClient
         creator={creator as Creator}
         initialRooms={(rooms ?? []) as Room[]}

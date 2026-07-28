@@ -117,7 +117,7 @@ export function JoinSheet({
                 border: "none",
                 cursor: "pointer",
                 background: "var(--violet)",
-                color: "#fff",
+                color: "var(--on-accent)",
                 borderRadius: 14,
                 padding: "14px 20px",
                 fontWeight: 800,

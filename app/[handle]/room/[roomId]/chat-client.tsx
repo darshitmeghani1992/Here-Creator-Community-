@@ -679,7 +679,7 @@ export function ChatClient({
               border: "none",
               cursor: "pointer",
               background: "var(--violet)",
-              color: "#fff",
+              color: "var(--on-accent)",
               borderRadius: 999,
               padding: "12px 22px",
               fontWeight: 800,
@@ -905,7 +905,7 @@ function YouBubble({
           style={{
             maxWidth: "82%",
             background: "var(--violet)",
-            color: "#fff",
+            color: "var(--on-accent)",
             borderRadius: "16px 16px 4px 16px",
             padding: "11px 14px",
             fontSize: 14.5,

@@ -213,7 +213,7 @@ export function CreatePollSheet({
             cursor: busy || !valid ? "default" : "pointer",
             opacity: busy || !valid ? 0.6 : 1,
             background: "var(--violet)",
-            color: "#fff",
+            color: "var(--on-accent)",
             borderRadius: 14,
             padding: 16,
             marginTop: 20,

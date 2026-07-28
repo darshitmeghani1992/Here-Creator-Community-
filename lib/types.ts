@@ -7,6 +7,7 @@ export interface Creator {
   avatar_url: string | null;
   is_live: boolean;
   owner_id: string | null;
+  theme: string | null;
 }
 
 export interface Room {
