@@ -17,6 +17,7 @@ export interface Room {
   closes_at: string | null; // null = permanent
   is_open: boolean;
   created_at: string;
+  capacity: number | null; // null = unlimited
 }
 
 export interface AppUser {
@@ -43,6 +44,27 @@ export interface Message {
 /** Message joined with its author's display name, as rendered in the chat. */
 export interface ChatMessage extends Message {
   author_name: string | null;
+}
+
+export interface Poll {
+  id: string;
+  room_id: string;
+  creator_id: string | null;
+  question: string;
+  options: string[];
+  is_open: boolean;
+  created_at: string;
+}
+
+export interface PollVoteRow {
+  option_index: number;
+  user_id: string;
+}
+
+/** A poll plus its current votes, as handed to the client. */
+export interface PollState {
+  poll: Poll;
+  votes: PollVoteRow[];
 }
 
 /** Minimal DB typing for the supabase-js generic. Kept intentionally loose;

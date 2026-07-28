@@ -60,6 +60,37 @@ export async function signInWithGoogle(next: string) {
   });
 }
 
+/**
+ * Ensures the current signed-in user has a `users` profile row (creators who
+ * sign in via magic link / Google don't get one from the guest flow). Never
+ * clobbers an existing row. Returns the user id, or null if signed out.
+ */
+export async function ensureProfile(): Promise<string | null> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: existing } = await supabase
+    .from("users")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!existing) {
+    const name =
+      (user.user_metadata?.name as string) ||
+      (user.email ? user.email.split("@")[0] : "You");
+    await supabase.from("users").insert({
+      id: user.id,
+      display_name: name,
+      is_guest: user.is_anonymous ?? false,
+    });
+  }
+  return user.id;
+}
+
 /** Signs the current user out and reloads to a clean state. */
 export async function signOut() {
   const supabase = createClient();

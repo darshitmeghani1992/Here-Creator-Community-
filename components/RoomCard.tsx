@@ -13,16 +13,22 @@ import { RoomIcon } from "@/components/RoomIcon";
 export function RoomCard({
   room,
   now,
+  isOwner = false,
   onEnter,
+  onFull,
 }: {
   room: Room;
   now: number;
+  isOwner?: boolean;
   onEnter: () => void;
+  onFull?: () => void;
 }) {
   const { icon, chipBg } = roomVisual(room);
   const members = usePresenceCount(`room:${room.id}`, null);
   const temp = room.kind === "temporary";
   const secs = remainingSeconds(room.closes_at, now);
+  const cap = room.capacity;
+  const full = cap != null && members >= cap && !isOwner;
 
   const tagText = temp ? `CLOSES IN ${formatCountdown(secs)}` : "ALWAYS OPEN";
   const tagStyle: React.CSSProperties = {
@@ -40,11 +46,12 @@ export function RoomCard({
 
   return (
     <button
-      onClick={onEnter}
+      onClick={full ? onFull : onEnter}
       style={{
         width: "100%",
         textAlign: "left",
-        cursor: "pointer",
+        cursor: full ? "default" : "pointer",
+        opacity: full ? 0.72 : 1,
         background: "var(--card)",
         border: `1px solid ${temp ? "var(--line2)" : "var(--line)"}`,
         borderRadius: 18,
@@ -87,10 +94,28 @@ export function RoomCard({
                 animation: "pulseDot 1.3s infinite",
               }}
             />
-            {members} here
+            {members}
+            {cap != null ? ` / ${cap}` : ""} here
           </div>
         </div>
-        <span style={tagStyle}>{tagText}</span>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
+          {full && (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: ".03em",
+                padding: "4px 8px",
+                borderRadius: 8,
+                color: "var(--red)",
+                background: "var(--red-100)",
+              }}
+            >
+              FULL
+            </span>
+          )}
+          <span style={tagStyle}>{tagText}</span>
+        </div>
       </div>
     </button>
   );

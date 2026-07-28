@@ -2,7 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Creator, Room, ChatMessage } from "@/lib/types";
+import type {
+  Creator,
+  Room,
+  ChatMessage,
+  Poll,
+  PollVoteRow,
+  PollState,
+} from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/useUser";
 import { usePresenceCount } from "@/lib/usePresence";
@@ -11,6 +18,8 @@ import { remainingSeconds, formatCountdown } from "@/lib/rooms";
 import { track } from "@/lib/posthog";
 import { uploadAttachment, type Attachment } from "@/lib/upload";
 import type { AttachmentType } from "@/lib/types";
+import { PollCard } from "@/components/PollCard";
+import { CreatePollSheet } from "@/components/CreatePollSheet";
 
 type FloatReaction = { id: number; left: number; emoji: string };
 
@@ -24,10 +33,12 @@ export function ChatClient({
   creator,
   room,
   initialMessages,
+  initialPoll,
 }: {
   creator: Creator;
   room: Room;
   initialMessages: ChatMessage[];
+  initialPoll: PollState | null;
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -42,11 +53,18 @@ export function ChatClient({
   const [pending, setPending] = useState<Attachment | null>(null);
   const [uploading, setUploading] = useState(false);
   const [attachError, setAttachError] = useState<string | null>(null);
+  const [poll, setPoll] = useState<Poll | null>(initialPoll?.poll ?? null);
+  const [votes, setVotes] = useState<PollVoteRow[]>(initialPoll?.votes ?? []);
+  const [showPollSheet, setShowPollSheet] = useState(false);
+  const [creatingPoll, setCreatingPoll] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const nameCache = useRef<Map<string, string>>(new Map());
   const reactionId = useRef(0);
+  const pollRef = useRef<string | null>(initialPoll?.poll.id ?? null);
+
+  const myVote = user ? votes.find((v) => v.user_id === user.id)?.option_index ?? null : null;
 
   // Stable presence identity for this occupant.
   const selfKey = useRef<string>(
@@ -132,6 +150,43 @@ export function ChatClient({
           }
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "polls",
+          filter: `room_id=eq.${room.id}`,
+        },
+        (payload) => {
+          const p = payload.new as Poll;
+          if (payload.eventType === "DELETE" || (p && !p.is_open)) {
+            if (!p || p.id === pollRef.current) {
+              pollRef.current = null;
+              setPoll(null);
+              setVotes([]);
+            }
+            return;
+          }
+          if (p?.is_open) {
+            pollRef.current = p.id;
+            setPoll(p);
+            setVotes([]);
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "poll_votes" },
+        (payload) => {
+          const v = payload.new as PollVoteRow & { poll_id: string };
+          if (!v || v.poll_id !== pollRef.current) return;
+          setVotes((prev) => [
+            ...prev.filter((x) => x.user_id !== v.user_id),
+            { user_id: v.user_id, option_index: v.option_index },
+          ]);
+        },
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -141,7 +196,11 @@ export function ChatClient({
 
   // Guarantee a signed-in (guest) session so Storage + message RLS let us write.
   async function ensureUid(): Promise<string> {
-    if (user?.id) return user.id;
+    if (user?.id) {
+      const { ensureProfile } = await import("@/lib/auth-client");
+      await ensureProfile();
+      return user.id;
+    }
     const { ensureGuestSession } = await import("@/lib/auth-client");
     return ensureGuestSession(getGuestName() || "Guest");
   }
@@ -198,6 +257,55 @@ export function ChatClient({
       () => setReactions((prev) => prev.filter((r) => r.id !== id)),
       2600,
     );
+  }
+
+  async function vote(optionIndex: number) {
+    if (!poll) return;
+    try {
+      const uid = await ensureUid();
+      setVotes((prev) => [
+        ...prev.filter((v) => v.user_id !== uid),
+        { user_id: uid, option_index: optionIndex },
+      ]);
+      await supabase
+        .from("poll_votes")
+        .upsert(
+          { poll_id: poll.id, user_id: uid, option_index: optionIndex },
+          { onConflict: "poll_id,user_id" },
+        );
+    } catch {
+      /* ignore vote failure */
+    }
+  }
+
+  async function createPoll(question: string, options: string[]) {
+    setCreatingPoll(true);
+    try {
+      const uid = await ensureUid();
+      const { data, error } = await supabase
+        .from("polls")
+        .insert({ room_id: room.id, creator_id: uid, question, options, is_open: true })
+        .select()
+        .single();
+      if (error || !data) throw error ?? new Error("insert failed");
+      pollRef.current = (data as Poll).id;
+      setPoll(data as Poll);
+      setVotes([]);
+      setShowPollSheet(false);
+    } catch {
+      /* keep the sheet open so they can retry */
+    } finally {
+      setCreatingPoll(false);
+    }
+  }
+
+  async function closePoll() {
+    if (!poll) return;
+    const id = poll.id;
+    pollRef.current = null;
+    setPoll(null);
+    setVotes([]);
+    await supabase.from("polls").update({ is_open: false }).eq("id", id);
   }
 
   return (
@@ -261,7 +369,8 @@ export function ChatClient({
                 animation: "pulseDot 1.1s infinite",
               }}
             />
-            {here} here
+            {here}
+            {room.capacity != null ? ` / ${room.capacity}` : ""} here
             {temp && (
               <span style={{ color: "var(--orange)", fontWeight: 700 }}>
                 · closes in {formatCountdown(secs)}
@@ -269,7 +378,39 @@ export function ChatClient({
             )}
           </div>
         </div>
+        {isOwner && !poll && (
+          <button
+            onClick={() => setShowPollSheet(true)}
+            aria-label="Start a poll"
+            style={{
+              width: 40,
+              height: 40,
+              flex: "none",
+              borderRadius: 12,
+              border: "1px solid var(--line2)",
+              background: "var(--card)",
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--violet)" strokeWidth="2.2">
+              <path d="M6 20V10M12 20V4M18 20v-6" />
+            </svg>
+          </button>
+        )}
       </div>
+
+      {poll && (
+        <PollCard
+          poll={poll}
+          votes={votes}
+          myVote={myVote}
+          isOwner={isOwner}
+          onVote={vote}
+          onClose={closePoll}
+        />
+      )}
 
       {/* Messages */}
       <div
@@ -534,6 +675,14 @@ export function ChatClient({
           </button>
         </div>
       </div>
+
+      {showPollSheet && (
+        <CreatePollSheet
+          onCreate={createPoll}
+          onClose={() => setShowPollSheet(false)}
+          busy={creatingPoll}
+        />
+      )}
     </div>
   );
 }

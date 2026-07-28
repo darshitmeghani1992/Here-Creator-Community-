@@ -4,7 +4,14 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { AppShell } from "@/components/AppShell";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ChatClient } from "./chat-client";
-import type { Creator, Room, ChatMessage } from "@/lib/types";
+import type {
+  Creator,
+  Room,
+  ChatMessage,
+  Poll,
+  PollVoteRow,
+  PollState,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -62,12 +69,35 @@ export default async function RoomPage({
     }))
     .reverse();
 
+  // Active poll (if any) + its current votes.
+  const { data: pollRow } = await supabase
+    .from("polls")
+    .select("*")
+    .eq("room_id", params.roomId)
+    .eq("is_open", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let initialPoll: PollState | null = null;
+  if (pollRow) {
+    const { data: voteRows } = await supabase
+      .from("poll_votes")
+      .select("option_index, user_id")
+      .eq("poll_id", (pollRow as Poll).id);
+    initialPoll = {
+      poll: pollRow as Poll,
+      votes: (voteRows ?? []) as PollVoteRow[],
+    };
+  }
+
   return (
     <AppShell>
       <ChatClient
         creator={creator as Creator}
         room={room as Room}
         initialMessages={initialMessages}
+        initialPoll={initialPoll}
       />
     </AppShell>
   );
