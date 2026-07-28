@@ -106,8 +106,10 @@ curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/clos
 1. Push to GitHub and import the repo in **Vercel**.
 2. Add the same env vars in the Vercel project settings.
 3. [`vercel.json`](vercel.json) already registers the cron that calls
-   `/api/cron/close-rooms` every minute. With `CRON_SECRET` set, Vercel authenticates
-   the call automatically.
+   `/api/cron/close-rooms` (daily — the max frequency on Vercel's free Hobby plan;
+   tighten it on Pro). With `CRON_SECRET` set, Vercel authenticates the call
+   automatically. Expired rooms also disappear instantly client-side, so the
+   sweep interval only affects how quickly the DB `is_open` flag is tidied.
 4. Update `NEXT_PUBLIC_SITE_URL` and the Google redirect URL to your production domain.
 
 ### Analytics (optional)

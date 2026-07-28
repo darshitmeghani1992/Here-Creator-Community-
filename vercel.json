@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/close-rooms",
-      "schedule": "* * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
