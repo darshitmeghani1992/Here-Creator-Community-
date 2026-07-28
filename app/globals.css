@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* HERE design tokens — the single source shared by Tailwind theme + raw var() usage. */
+:root {
+  --bg: #f4f5f8;
+  --card: #fff;
+  --ink: #15171c;
+  --muted: #697386;
+  --faint: #9aa2b1;
+  --line: #eef0f4;
+  --line2: #e4e7ee;
+  --violet: #7c3aed;
+  --violet-dk: #6d28d9;
+  --violet-100: #f2ecfe;
+  --violet-200: #e6d9fd;
+  --violet-700: #5b21b6;
+  --red: #ef2d4c;
+  --red-100: #fdecef;
+  --green: #0f9d6b;
+  --green-100: #e7f6ef;
+  --orange: #f59e0b;
+  --orange-100: #fdf3e0;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Hide scrollbars on chat/scroll surfaces (the prototype's .hb helper). */
+.hb::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.hb {
+  scrollbar-width: none;
+}
+
+/* Animations copied verbatim from the prototype. */
+@keyframes pulseDot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+}
+@keyframes sheetUp {
+  from {
+    transform: translateY(102%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes msgIn {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) scale(0.6);
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-150px) scale(1.25);
+    opacity: 0;
+  }
+}
+@keyframes toastIn {
+  from {
+    transform: translateY(16px) scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
