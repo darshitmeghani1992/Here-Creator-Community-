@@ -2,20 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-/* HERE design tokens — the single source shared by Tailwind theme + raw var() usage. */
+/* HERE design tokens.
+   Base tokens (bg/card/ink/muted/line/violet/on-accent) are the only ones a
+   theme overrides — everything else is derived from them with color-mix(), so
+   setting the base six on a wrapper re-skins the whole app (see lib/themes.ts). */
 :root {
+  /* base (themeable) */
   --bg: #f4f5f8;
-  --card: #fff;
+  --card: #ffffff;
   --ink: #15171c;
   --muted: #697386;
-  --faint: #9aa2b1;
   --line: #eef0f4;
-  --line2: #e4e7ee;
-  --violet: #7c3aed;
-  --violet-dk: #6d28d9;
-  --violet-100: #f2ecfe;
-  --violet-200: #e6d9fd;
-  --violet-700: #5b21b6;
+  --violet: #7c3aed; /* accent */
+  --on-accent: #ffffff; /* text/icon on the accent */
+
+  /* derived from the base tokens */
+  --faint: color-mix(in srgb, var(--ink) 42%, var(--card));
+  --line2: color-mix(in srgb, var(--ink) 14%, var(--card));
+  --violet-dk: color-mix(in srgb, var(--violet) 82%, var(--ink));
+  --violet-100: color-mix(in srgb, var(--violet) 14%, var(--card));
+  --violet-200: color-mix(in srgb, var(--violet) 28%, var(--card));
+  --violet-700: color-mix(in srgb, var(--violet) 70%, var(--ink));
+
+  /* semantic status colors (fixed, so online/live/closing always read the same) */
   --red: #ef2d4c;
   --red-100: #fdecef;
   --green: #0f9d6b;

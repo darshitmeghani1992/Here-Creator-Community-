@@ -12,6 +12,7 @@ import {
   validateHandle,
   HANDLE_MIN,
 } from "@/lib/handle";
+import { THEMES, themeVars, DEFAULT_THEME } from "@/lib/themes";
 
 type SpaceState = "loading" | "none" | Creator;
 
@@ -397,7 +398,9 @@ function Onboarding({
 /* ─────────────────────────── your space ─────────────────────────── */
 
 function YourSpace({ creator }: { creator: Creator }) {
+  const supabase = createClient();
   const [copied, setCopied] = useState(false);
+  const [theme, setTheme] = useState(creator.theme ?? DEFAULT_THEME);
   const url =
     typeof window !== "undefined"
       ? `${window.location.origin}/${creator.handle}`
@@ -413,8 +416,13 @@ function YourSpace({ creator }: { creator: Creator }) {
     }
   }
 
+  async function saveTheme(id: string) {
+    setTheme(id);
+    await supabase.from("creators").update({ theme: id }).eq("id", creator.id);
+  }
+
   return (
-    <div style={{ paddingTop: 22 }}>
+    <div style={{ ...themeVars(theme), paddingTop: 22 }}>
       <BigEmoji>🎉</BigEmoji>
       <h1 style={{ ...h1Style, textAlign: "center" }}>Your space is live</h1>
       <p style={{ ...pStyle, textAlign: "center", marginBottom: 20 }}>
@@ -456,7 +464,7 @@ function YourSpace({ creator }: { creator: Creator }) {
             border: "none",
             cursor: "pointer",
             background: copied ? "var(--green)" : "var(--violet)",
-            color: "#fff",
+            color: copied ? "#fff" : "var(--on-accent)",
             borderRadius: 10,
             padding: "9px 16px",
             fontWeight: 800,
@@ -470,6 +478,75 @@ function YourSpace({ creator }: { creator: Creator }) {
       <Link href={`/${creator.handle}`} style={{ textDecoration: "none" }}>
         <div style={{ ...primaryBtn, textAlign: "center" }}>Go to my space →</div>
       </Link>
+
+      {/* Theme picker */}
+      <div style={{ marginTop: 26 }}>
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: ".08em",
+            color: "var(--faint)",
+            marginBottom: 10,
+          }}
+        >
+          THEME
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          {THEMES.map((t) => {
+            const active = theme === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => saveTheme(t.id)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9,
+                  minWidth: 0,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  padding: 8,
+                  borderRadius: 12,
+                  background: t.bg,
+                  border: active ? "2px solid var(--violet)" : "1px solid var(--line2)",
+                }}
+              >
+                <span
+                  style={{
+                    width: 24,
+                    height: 24,
+                    flex: "none",
+                    borderRadius: 7,
+                    background: t.accent,
+                    boxShadow: "inset 0 0 0 1px rgba(0,0,0,.12)",
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: t.ink,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {t.name}
+                </span>
+                {active && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--violet)" strokeWidth="3" style={{ marginLeft: "auto", flex: "none" }}>
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 9 }}>
+          Saved automatically — reload your space to see it.
+        </div>
+      </div>
 
       <div
         style={{
@@ -586,7 +663,7 @@ const primaryBtn: React.CSSProperties = {
   border: "none",
   cursor: "pointer",
   background: "var(--violet)",
-  color: "#fff",
+  color: "var(--on-accent)",
   borderRadius: 14,
   padding: 15,
   fontWeight: 800,

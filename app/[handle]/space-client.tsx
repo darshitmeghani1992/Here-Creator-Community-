@@ -21,14 +21,18 @@ import { track } from "@/lib/posthog";
 import { RoomCard } from "@/components/RoomCard";
 import { JoinSheet } from "@/components/JoinSheet";
 import { CreateRoomSheet } from "@/components/CreateRoomSheet";
+import { SpacePolls } from "@/components/SpacePolls";
 import { Toast } from "@/components/Toast";
+import type { PollState } from "@/lib/types";
 
 export function SpaceClient({
   creator,
   initialRooms,
+  initialPolls,
 }: {
   creator: Creator;
   initialRooms: Room[];
+  initialPolls: PollState[];
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -36,6 +40,7 @@ export function SpaceClient({
   const isOwner = !!user && creator.owner_id === user.id;
 
   const [rooms, setRooms] = useState<Room[]>(initialRooms);
+  const [tab, setTab] = useState<"rooms" | "polls">("rooms");
   const [now, setNow] = useState(() => Date.now());
   const [overlay, setOverlay] = useState<"join" | "create" | null>(null);
   const [pendingRoom, setPendingRoom] = useState<Room | null>(null);
@@ -346,7 +351,32 @@ export function SpaceClient({
           </button>
         </div>
 
-        {/* Rooms */}
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 4, padding: "10px 16px 0" }}>
+          {(["rooms", "polls"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              style={{
+                flex: 1,
+                border: "none",
+                background: "none",
+                cursor: "pointer",
+                fontFamily: "var(--font-inter)",
+                fontWeight: 800,
+                fontSize: 14,
+                textTransform: "capitalize",
+                color: tab === t ? "var(--violet)" : "var(--muted)",
+                padding: "8px 0 10px",
+                borderBottom: `2px solid ${tab === t ? "var(--violet)" : "var(--line2)"}`,
+              }}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
+        {tab === "rooms" && (
         <div style={{ padding: "16px 18px 0" }}>
           <div
             style={{
@@ -428,6 +458,15 @@ export function SpaceClient({
             </div>
           )}
         </div>
+        )}
+
+        {tab === "polls" && (
+          <SpacePolls
+            creator={creator}
+            initialPolls={initialPolls}
+            isOwner={isOwner}
+          />
+        )}
       </div>
 
       {overlay === "join" && pendingRoom && (

@@ -9,6 +9,7 @@ import type {
   Poll,
   PollVoteRow,
   PollState,
+  PollOptionInput,
 } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/useUser";
@@ -278,13 +279,27 @@ export function ChatClient({
     }
   }
 
-  async function createPoll(question: string, options: string[]) {
+  async function uploadPollImage(file: File): Promise<string> {
+    const uid = await ensureUid();
+    const att = await uploadAttachment(file, room.id, uid);
+    return att.url;
+  }
+
+  async function createPoll(question: string, opts: PollOptionInput[]) {
     setCreatingPoll(true);
     try {
       const uid = await ensureUid();
       const { data, error } = await supabase
         .from("polls")
-        .insert({ room_id: room.id, creator_id: uid, question, options, is_open: true })
+        .insert({
+          room_id: room.id,
+          space_id: creator.id,
+          creator_id: uid,
+          question,
+          options: opts.map((o) => o.label || "Image"),
+          option_images: opts.map((o) => o.image ?? ""),
+          is_open: true,
+        })
         .select()
         .single();
       if (error || !data) throw error ?? new Error("insert failed");
@@ -664,7 +679,7 @@ export function ChatClient({
               border: "none",
               cursor: "pointer",
               background: "var(--violet)",
-              color: "#fff",
+              color: "var(--on-accent)",
               borderRadius: 999,
               padding: "12px 22px",
               fontWeight: 800,
@@ -680,6 +695,7 @@ export function ChatClient({
         <CreatePollSheet
           onCreate={createPoll}
           onClose={() => setShowPollSheet(false)}
+          uploadImage={uploadPollImage}
           busy={creatingPoll}
         />
       )}
@@ -889,7 +905,7 @@ function YouBubble({
           style={{
             maxWidth: "82%",
             background: "var(--violet)",
-            color: "#fff",
+            color: "var(--on-accent)",
             borderRadius: "16px 16px 4px 16px",
             padding: "11px 14px",
             fontSize: 14.5,

@@ -4,7 +4,7 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { AppShell } from "@/components/AppShell";
 import { SetupNotice } from "@/components/SetupNotice";
 import { SpaceClient } from "./space-client";
-import type { Creator, Room } from "@/lib/types";
+import type { Creator, Room, Poll, PollVoteRow, PollState } from "@/lib/types";
 
 // Always render fresh so the SSR'd room list reflects the live DB state.
 export const dynamic = "force-dynamic";
@@ -33,11 +33,37 @@ export default async function SpacePage({
     .eq("is_open", true)
     .order("created_at", { ascending: true });
 
+  // Space-level polls (not tied to a room) for the Polls tab.
+  const { data: pollRows } = await supabase
+    .from("polls")
+    .select("*")
+    .eq("space_id", creator.id)
+    .is("room_id", null)
+    .eq("is_open", true)
+    .order("created_at", { ascending: false });
+
+  let initialPolls: PollState[] = [];
+  if (pollRows?.length) {
+    const ids = (pollRows as Poll[]).map((p) => p.id);
+    const { data: allVotes } = await supabase
+      .from("poll_votes")
+      .select("poll_id, option_index, user_id")
+      .in("poll_id", ids);
+    const rows = (allVotes ?? []) as (PollVoteRow & { poll_id: string })[];
+    initialPolls = (pollRows as Poll[]).map((p) => ({
+      poll: p,
+      votes: rows
+        .filter((v) => v.poll_id === p.id)
+        .map((v) => ({ option_index: v.option_index, user_id: v.user_id })),
+    }));
+  }
+
   return (
-    <AppShell>
+    <AppShell theme={(creator as Creator).theme}>
       <SpaceClient
         creator={creator as Creator}
         initialRooms={(rooms ?? []) as Room[]}
+        initialPolls={initialPolls}
       />
     </AppShell>
   );

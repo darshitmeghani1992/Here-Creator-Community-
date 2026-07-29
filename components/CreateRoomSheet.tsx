@@ -246,7 +246,7 @@ export function CreateRoomSheet({
             cursor: busy ? "default" : "pointer",
             opacity: busy ? 0.7 : 1,
             background: "var(--violet)",
-            color: "#fff",
+            color: "var(--on-accent)",
             borderRadius: 14,
             padding: 16,
             marginTop: 20,
