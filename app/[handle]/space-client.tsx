@@ -2,14 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Creator, Room } from "@/lib/types";
+import type { Creator, Room, CreatorLink, PollState } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/useUser";
 import { usePresenceCount } from "@/lib/usePresence";
-import {
-  ensureGuestSession,
-  signInWithGoogle,
-} from "@/lib/auth-client";
+import { ensureGuestSession, signInWithGoogle } from "@/lib/auth-client";
 import {
   hasJoined,
   rememberJoined,
@@ -18,29 +15,36 @@ import {
 } from "@/lib/membership";
 import { remainingSeconds } from "@/lib/rooms";
 import { track } from "@/lib/posthog";
+import { resolveAppearance } from "@/lib/appearance";
 import { RoomCard } from "@/components/RoomCard";
 import { JoinSheet } from "@/components/JoinSheet";
 import { CreateRoomSheet } from "@/components/CreateRoomSheet";
+import { LinkButton } from "@/components/LinkButton";
 import { SpacePolls } from "@/components/SpacePolls";
 import { Toast } from "@/components/Toast";
-import type { PollState } from "@/lib/types";
 
 export function SpaceClient({
   creator,
   initialRooms,
   initialPolls,
+  links,
 }: {
   creator: Creator;
   initialRooms: Room[];
   initialPolls: PollState[];
+  links: CreatorLink[];
 }) {
   const router = useRouter();
   const supabase = createClient();
   const { user } = useUser();
   const isOwner = !!user && creator.owner_id === user.id;
 
+  const appearance = useMemo(
+    () => resolveAppearance(creator.theme, creator.appearance),
+    [creator.theme, creator.appearance],
+  );
+
   const [rooms, setRooms] = useState<Room[]>(initialRooms);
-  const [tab, setTab] = useState<"rooms" | "polls">("rooms");
   const [now, setNow] = useState(() => Date.now());
   const [overlay, setOverlay] = useState<"join" | "create" | null>(null);
   const [pendingRoom, setPendingRoom] = useState<Room | null>(null);
@@ -232,94 +236,36 @@ export function SpaceClient({
     }
   }
 
+  const liveRoom = openRooms[0] ?? null;
+  const restRooms = openRooms.slice(1);
+  const showPolls = isOwner || initialPolls.length > 0;
+
   return (
     <>
       <StatusBar />
-      <div className="hb" style={{ flex: 1, overflowY: "auto", paddingBottom: 20 }}>
-        {/* Header */}
+      <div className="hb" style={{ flex: 1, overflowY: "auto", paddingBottom: 28 }}>
+        {/* ── Cover ── */}
         <div
           style={{
-            padding: "6px 18px 14px",
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            borderBottom: "1px solid var(--line)",
+            height: 132,
+            position: "relative",
+            background: creator.cover_url
+              ? `center/cover no-repeat url(${creator.cover_url})`
+              : "linear-gradient(135deg, color-mix(in srgb, var(--violet) 88%, #fff), var(--violet) 55%, color-mix(in srgb, var(--violet) 78%, #000))",
           }}
         >
-          <div
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "50%",
-              background:
-                "conic-gradient(from 210deg,#7c3aed,#ec4899,#f59e0b,#0f9d6b,#7c3aed)",
-              padding: 2,
-              boxSizing: "border-box",
-              flex: "none",
-              position: "relative",
-            }}
-          >
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                borderRadius: "50%",
-                overflow: "hidden",
-                background: "var(--muted)",
-                backgroundImage: creator.avatar_url
-                  ? `url(${creator.avatar_url})`
-                  : undefined,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }}
-            />
-            <span
-              style={{
-                position: "absolute",
-                right: -1,
-                bottom: -1,
-                width: 12,
-                height: 12,
-                borderRadius: "50%",
-                background: "var(--green)",
-                border: "2px solid var(--bg)",
-              }}
-            />
-          </div>
-          <div style={{ flex: 1, lineHeight: 1.15 }}>
-            <div style={{ fontWeight: 800, fontSize: 19 }}>
-              {creator.display_name}&apos;s Space
-            </div>
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: "var(--green)",
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-              }}
-            >
-              <span
-                style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: "var(--green)",
-                  animation: "pulseDot 1.1s infinite",
-                }}
-              />
-              {online} online now
-            </div>
-          </div>
           {isOwner && (
             <span
               style={{
+                position: "absolute",
+                top: 12,
+                left: 14,
                 fontSize: 10,
                 fontWeight: 800,
-                letterSpacing: ".05em",
-                color: "var(--violet)",
-                background: "var(--violet-100)",
+                letterSpacing: ".06em",
+                color: "#fff",
+                background: "rgba(0,0,0,.28)",
+                backdropFilter: "blur(6px)",
                 borderRadius: 999,
                 padding: "5px 10px",
               }}
@@ -331,18 +277,21 @@ export function SpaceClient({
             onClick={shareSpace}
             aria-label="Share this space"
             style={{
-              width: 40,
-              height: 40,
-              flex: "none",
-              borderRadius: 12,
-              border: "1px solid var(--line2)",
-              background: "var(--card)",
+              position: "absolute",
+              top: 12,
+              right: 14,
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              border: "none",
+              background: "rgba(255,255,255,.22)",
+              backdropFilter: "blur(6px)",
               display: "grid",
               placeItems: "center",
               cursor: "pointer",
             }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
               <circle cx="18" cy="5" r="3" />
               <circle cx="6" cy="12" r="3" />
               <circle cx="18" cy="19" r="3" />
@@ -351,46 +300,199 @@ export function SpaceClient({
           </button>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: 4, padding: "10px 16px 0" }}>
-          {(["rooms", "polls"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              style={{
-                flex: 1,
-                border: "none",
-                background: "none",
-                cursor: "pointer",
-                fontFamily: "var(--font-inter)",
-                fontWeight: 800,
-                fontSize: 14,
-                textTransform: "capitalize",
-                color: tab === t ? "var(--violet)" : "var(--muted)",
-                padding: "8px 0 10px",
-                borderBottom: `2px solid ${tab === t ? "var(--violet)" : "var(--line2)"}`,
-              }}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-
-        {tab === "rooms" && (
-        <div style={{ padding: "16px 18px 0" }}>
+        {/* ── Identity ── */}
+        <div style={{ padding: "0 22px", textAlign: "center" }}>
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 12,
+              width: 90,
+              height: 90,
+              borderRadius: 26,
+              margin: "-46px auto 0",
+              padding: 3,
+              boxSizing: "border-box",
+              background:
+                "conic-gradient(from 210deg,#7c3aed,#ec4899,#f59e0b,#0f9d6b,#7c3aed)",
+              position: "relative",
             }}
           >
-            <div style={{ fontWeight: 800, fontSize: 16 }}>Rooms open now</div>
-            <span style={{ fontSize: 12, color: "var(--muted)" }}>
-              {openRooms.length} live
-            </span>
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                borderRadius: 23,
+                overflow: "hidden",
+                background: "var(--card)",
+                display: "grid",
+                placeItems: "center",
+                backgroundImage: creator.avatar_url ? `url(${creator.avatar_url})` : undefined,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                border: "3px solid var(--card)",
+              }}
+            >
+              {!creator.avatar_url && (
+                <span style={{ fontSize: 34, fontWeight: 800, color: "var(--violet)" }}>
+                  {creator.display_name.slice(0, 1).toUpperCase()}
+                </span>
+              )}
+            </div>
           </div>
+
+          <div style={{ fontWeight: 800, fontSize: 22, letterSpacing: "-.02em", marginTop: 10 }}>
+            {creator.display_name}
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--violet)" }}>
+            @{creator.handle}
+          </div>
+          {creator.tagline && (
+            <div style={{ fontSize: 14.5, fontWeight: 600, marginTop: 9 }}>
+              {creator.tagline}
+            </div>
+          )}
+          {creator.bio && (
+            <p
+              style={{
+                fontSize: 13,
+                color: "var(--muted)",
+                margin: "6px auto 0",
+                maxWidth: 34 + "ch",
+                lineHeight: 1.5,
+              }}
+            >
+              {creator.bio}
+            </p>
+          )}
+
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
+              marginTop: 13,
+              background: "var(--green-100)",
+              color: "var(--green)",
+              borderRadius: 999,
+              padding: "6px 13px",
+              fontSize: 12.5,
+              fontWeight: 800,
+            }}
+          >
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: "var(--green)",
+                animation: "pulseDot 1.1s infinite",
+              }}
+            />
+            {online} here now
+          </div>
+        </div>
+
+        {/* ── Live bar (rooms) ── */}
+        <div style={{ padding: "18px 18px 0" }}>
+          {liveRoom ? (
+            <button
+              onClick={() => enterRoom(liveRoom)}
+              style={{
+                width: "100%",
+                textAlign: "left",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                color: "var(--on-accent)",
+                background:
+                  "linear-gradient(120deg, var(--violet), color-mix(in srgb, var(--violet) 80%, #000))",
+                borderRadius: 18,
+                padding: "15px 16px",
+                display: "flex",
+                alignItems: "center",
+                gap: 13,
+                boxShadow: "0 16px 30px -12px color-mix(in srgb, var(--violet) 60%, transparent)",
+              }}
+            >
+              <span
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: "50%",
+                  background: "var(--on-accent)",
+                  flex: "none",
+                  animation: "pulseDot 1.1s infinite",
+                }}
+              />
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: "block", fontSize: 10.5, fontWeight: 800, letterSpacing: ".14em", opacity: 0.9 }}>
+                  ● LIVE NOW
+                </span>
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: 16,
+                    fontWeight: 800,
+                    letterSpacing: "-.01em",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {liveRoom.name}
+                </span>
+                <span style={{ display: "block", fontSize: 12, opacity: 0.9, fontWeight: 600 }}>
+                  {online} here right now
+                </span>
+              </span>
+              <span
+                style={{
+                  flex: "none",
+                  background: "rgba(255,255,255,.22)",
+                  borderRadius: 11,
+                  padding: "9px 14px",
+                  fontWeight: 800,
+                  fontSize: 13.5,
+                }}
+              >
+                Join →
+              </span>
+            </button>
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                border: "1px solid var(--line2)",
+                background: "var(--card)",
+                borderRadius: 18,
+                padding: "15px 16px",
+                display: "flex",
+                alignItems: "center",
+                gap: 13,
+              }}
+            >
+              <span
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
+                  background: "var(--violet-100)",
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 19,
+                  flex: "none",
+                }}
+              >
+                🌙
+              </span>
+              <span style={{ flex: 1 }}>
+                <span style={{ display: "block", fontSize: 14, fontWeight: 800 }}>
+                  No rooms open right now
+                </span>
+                <span style={{ display: "block", fontSize: 12, color: "var(--muted)", fontWeight: 600 }}>
+                  {isOwner ? "Open one below to go live." : "Check back soon."}
+                </span>
+              </span>
+            </div>
+          )}
 
           {isOwner && (
             <button
@@ -406,30 +508,23 @@ export function SpaceClient({
                 cursor: "pointer",
                 background: "var(--violet-100)",
                 color: "var(--violet-dk)",
-                borderRadius: 16,
-                padding: 15,
-                marginBottom: 12,
+                borderRadius: 14,
+                padding: 13,
+                marginTop: 10,
                 fontWeight: 800,
-                fontSize: 15,
+                fontSize: 14.5,
               }}
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.6"
-              >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6">
                 <path d="M12 5v14M5 12h14" />
               </svg>
-              New temporary room
+              Open a room
             </button>
           )}
 
-          {openRooms.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
-              {openRooms.map((room) => (
+          {restRooms.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+              {restRooms.map((room) => (
                 <RoomCard
                   key={room.id}
                   room={room}
@@ -440,33 +535,58 @@ export function SpaceClient({
                 />
               ))}
             </div>
-          ) : (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "40px 20px",
-                color: "var(--muted)",
-              }}
-            >
-              <div style={{ fontWeight: 800, fontSize: 17, color: "var(--ink)" }}>
-                It&apos;s quiet right now
-              </div>
-              <div style={{ fontSize: 13, marginTop: 6 }}>
-                No open rooms. Check back soon
-                {isOwner ? " — or open one above." : "."}
-              </div>
-            </div>
           )}
         </div>
+
+        {/* ── Links ── */}
+        {(links.length > 0 || isOwner) && (
+          <div style={{ padding: "22px 18px 0" }}>
+            {links.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+                {links.map((link) => (
+                  <LinkButton key={link.id} link={link} appearance={appearance} />
+                ))}
+              </div>
+            ) : (
+              <div
+                style={{
+                  textAlign: "center",
+                  border: "1.5px dashed var(--line2)",
+                  borderRadius: 16,
+                  padding: "22px 18px",
+                  color: "var(--muted)",
+                  fontSize: 13,
+                }}
+              >
+                <div style={{ fontWeight: 800, color: "var(--ink)", fontSize: 14.5 }}>
+                  Add your links
+                </div>
+                <div style={{ marginTop: 5 }}>
+                  Head to Studio → Appearance to add your music, socials and shop.
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
-        {tab === "polls" && (
-          <SpacePolls
-            creator={creator}
-            initialPolls={initialPolls}
-            isOwner={isOwner}
-          />
+        {/* ── Polls ── */}
+        {showPolls && (
+          <div style={{ paddingTop: 8 }}>
+            <SpacePolls creator={creator} initialPolls={initialPolls} isOwner={isOwner} />
+          </div>
         )}
+
+        <div
+          style={{
+            textAlign: "center",
+            fontSize: 11,
+            color: "var(--faint)",
+            fontWeight: 600,
+            paddingTop: 22,
+          }}
+        >
+          powered by <b style={{ color: "var(--violet)" }}>HERE</b>
+        </div>
       </div>
 
       {overlay === "join" && pendingRoom && (

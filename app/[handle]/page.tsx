@@ -4,7 +4,14 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { AppShell } from "@/components/AppShell";
 import { SetupNotice } from "@/components/SetupNotice";
 import { SpaceClient } from "./space-client";
-import type { Creator, Room, Poll, PollVoteRow, PollState } from "@/lib/types";
+import type {
+  Creator,
+  Room,
+  Poll,
+  PollVoteRow,
+  PollState,
+  CreatorLink,
+} from "@/lib/types";
 
 // Always render fresh so the SSR'd room list reflects the live DB state.
 export const dynamic = "force-dynamic";
@@ -33,6 +40,14 @@ export default async function SpacePage({
     .eq("is_open", true)
     .order("created_at", { ascending: true });
 
+  // Link-in-bio links, in the creator's chosen order.
+  const { data: linkRows } = await supabase
+    .from("creator_links")
+    .select("*")
+    .eq("creator_id", creator.id)
+    .eq("is_active", true)
+    .order("position", { ascending: true });
+
   // Space-level polls (not tied to a room) for the Polls tab.
   const { data: pollRows } = await supabase
     .from("polls")
@@ -59,11 +74,15 @@ export default async function SpacePage({
   }
 
   return (
-    <AppShell theme={(creator as Creator).theme}>
+    <AppShell
+      theme={(creator as Creator).theme}
+      appearance={(creator as Creator).appearance}
+    >
       <SpaceClient
         creator={creator as Creator}
         initialRooms={(rooms ?? []) as Room[]}
         initialPolls={initialPolls}
+        links={(linkRows ?? []) as CreatorLink[]}
       />
     </AppShell>
   );

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Creator } from "@/lib/types";
+import type { Creator, CreatorLink } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/useUser";
 import { signInWithEmail, signInWithGoogle, signOut } from "@/lib/auth-client";
@@ -12,7 +12,8 @@ import {
   validateHandle,
   HANDLE_MIN,
 } from "@/lib/handle";
-import { THEMES, themeVars, DEFAULT_THEME } from "@/lib/themes";
+import { themeVars } from "@/lib/themes";
+import { AppearanceEditor } from "@/components/AppearanceEditor";
 
 type SpaceState = "loading" | "none" | Creator;
 
@@ -400,11 +401,27 @@ function Onboarding({
 function YourSpace({ creator }: { creator: Creator }) {
   const supabase = createClient();
   const [copied, setCopied] = useState(false);
-  const [theme, setTheme] = useState(creator.theme ?? DEFAULT_THEME);
+  const [links, setLinks] = useState<CreatorLink[] | null>(null);
   const url =
     typeof window !== "undefined"
       ? `${window.location.origin}/${creator.handle}`
       : `/${creator.handle}`;
+
+  // Load this space's existing links for the appearance editor.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("creator_links")
+        .select("*")
+        .eq("creator_id", creator.id)
+        .order("position", { ascending: true });
+      if (!cancelled) setLinks((data as CreatorLink[]) ?? []);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [creator.id, supabase]);
 
   async function copy() {
     try {
@@ -416,13 +433,8 @@ function YourSpace({ creator }: { creator: Creator }) {
     }
   }
 
-  async function saveTheme(id: string) {
-    setTheme(id);
-    await supabase.from("creators").update({ theme: id }).eq("id", creator.id);
-  }
-
   return (
-    <div style={{ ...themeVars(theme), paddingTop: 22 }}>
+    <div style={{ ...themeVars(creator.theme ?? "lumina"), paddingTop: 22 }}>
       <BigEmoji>🎉</BigEmoji>
       <h1 style={{ ...h1Style, textAlign: "center" }}>Your space is live</h1>
       <p style={{ ...pStyle, textAlign: "center", marginBottom: 20 }}>
@@ -479,74 +491,14 @@ function YourSpace({ creator }: { creator: Creator }) {
         <div style={{ ...primaryBtn, textAlign: "center" }}>Go to my space →</div>
       </Link>
 
-      {/* Theme picker */}
-      <div style={{ marginTop: 26 }}>
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 800,
-            letterSpacing: ".08em",
-            color: "var(--faint)",
-            marginBottom: 10,
-          }}
-        >
-          THEME
+      {/* Full appearance / personalization editor */}
+      {links === null ? (
+        <div style={{ marginTop: 26, textAlign: "center", padding: 24 }}>
+          <Spinner />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          {THEMES.map((t) => {
-            const active = theme === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => saveTheme(t.id)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 9,
-                  minWidth: 0,
-                  cursor: "pointer",
-                  textAlign: "left",
-                  padding: 8,
-                  borderRadius: 12,
-                  background: t.bg,
-                  border: active ? "2px solid var(--violet)" : "1px solid var(--line2)",
-                }}
-              >
-                <span
-                  style={{
-                    width: 24,
-                    height: 24,
-                    flex: "none",
-                    borderRadius: 7,
-                    background: t.accent,
-                    boxShadow: "inset 0 0 0 1px rgba(0,0,0,.12)",
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: t.ink,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {t.name}
-                </span>
-                {active && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--violet)" strokeWidth="3" style={{ marginLeft: "auto", flex: "none" }}>
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        <div style={{ fontSize: 11.5, color: "var(--muted)", marginTop: 9 }}>
-          Saved automatically — reload your space to see it.
-        </div>
-      </div>
+      ) : (
+        <AppearanceEditor creator={creator} initialLinks={links} />
+      )}
 
       <div
         style={{
@@ -561,8 +513,8 @@ function YourSpace({ creator }: { creator: Creator }) {
           What you can do as the creator
         </div>
         <ul style={{ margin: 0, paddingLeft: 18, color: "var(--muted)", fontSize: 13.5, lineHeight: 1.7 }}>
-          <li>Open rooms with the <b style={{ color: "var(--ink)" }}>＋ New temporary room</b> button in your space</li>
-          <li>Rooms can be permanent or auto-close on a timer</li>
+          <li>Open rooms with the <b style={{ color: "var(--ink)" }}>Open a room</b> button in your space</li>
+          <li>Personalize your page above — background, buttons, font, links</li>
           <li>Share your link above to invite people in</li>
         </ul>
       </div>
