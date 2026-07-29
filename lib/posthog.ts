@@ -27,7 +27,8 @@ export type HereEvent =
   | "space_arrived"
   | "room_joined"
   | "first_message_sent"
-  | "temporary_room_created";
+  | "temporary_room_created"
+  | "link_clicked";
 
 export function track(event: HereEvent, props?: Record<string, unknown>) {
   if (!KEY) return;

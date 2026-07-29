@@ -7,6 +7,7 @@ const MAX_IMAGE = 10 * 1024 * 1024; // 10 MB
 const MAX_VIDEO = 25 * 1024 * 1024; // 25 MB
 const MAX_FILE = 25 * 1024 * 1024; // 25 MB
 const MAX_VIDEO_SECONDS = 30;
+const MAX_PROFILE_IMAGE = 6 * 1024 * 1024; // 6 MB — avatars, covers, link thumbs
 
 export interface Attachment {
   url: string;
@@ -85,4 +86,33 @@ export async function uploadAttachment(
 
   const { data } = supabase.storage.from("attachments").getPublicUrl(path);
   return { url: data.publicUrl, type, name: file.name };
+}
+
+/**
+ * Uploads a profile-style image (avatar, cover, link thumbnail) to the public
+ * attachments bucket and returns its public URL. Images only, 6 MB cap.
+ */
+export async function uploadPublicImage(
+  file: File,
+  prefix: string,
+): Promise<string> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Please choose an image file.");
+  }
+  if (file.size > MAX_PROFILE_IMAGE) {
+    throw new Error(`Image too large — max ${humanMb(MAX_PROFILE_IMAGE)}.`);
+  }
+  const supabase = createClient();
+  const safeName =
+    file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-60) || "image";
+  const path = `${prefix}/${Date.now()}-${safeName}`;
+  const { error } = await supabase.storage
+    .from("attachments")
+    .upload(path, file, {
+      cacheControl: "3600",
+      contentType: file.type || undefined,
+      upsert: false,
+    });
+  if (error) throw error;
+  return supabase.storage.from("attachments").getPublicUrl(path).data.publicUrl;
 }
