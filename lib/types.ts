@@ -50,6 +50,43 @@ export interface CreatorLink {
   created_at: string;
 }
 
+/** A fan's progression within one creator's world (points/level/streak). */
+export interface Fan {
+  creator_id: string;
+  user_id: string;
+  points: number;
+  level: number;
+  streak_days: number;
+  last_active_date: string | null;
+  joined_at: string;
+}
+
+export interface PointEvent {
+  id: number;
+  creator_id: string;
+  user_id: string;
+  activity_id: string | null;
+  kind: string;
+  points: number;
+  created_at: string;
+}
+
+export interface FanBadge {
+  creator_id: string;
+  user_id: string;
+  badge_key: string;
+  awarded_at: string;
+}
+
+/** One row in a leaderboard, joined with the fan's profile. */
+export interface LeaderRow {
+  user_id: string;
+  display_name: string;
+  avatar_url: string | null;
+  points: number;
+  level?: number;
+}
+
 export interface Room {
   id: string;
   creator_id: string;
@@ -145,6 +182,21 @@ export interface Database {
         Row: CreatorLink;
         Insert: Partial<CreatorLink> & { creator_id: string; title: string; url: string };
         Update: Partial<CreatorLink>;
+      };
+      fans: {
+        Row: Fan;
+        Insert: Partial<Fan> & { creator_id: string; user_id: string };
+        Update: Partial<Fan>;
+      };
+      point_events: {
+        Row: PointEvent;
+        Insert: Partial<PointEvent> & { creator_id: string; user_id: string; kind: string; points: number };
+        Update: Partial<PointEvent>;
+      };
+      fan_badges: {
+        Row: FanBadge;
+        Insert: Partial<FanBadge> & { creator_id: string; user_id: string; badge_key: string };
+        Update: Partial<FanBadge>;
       };
     };
     Views: Record<string, never>;

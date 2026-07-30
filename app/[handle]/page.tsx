@@ -11,6 +11,7 @@ import type {
   PollVoteRow,
   PollState,
   CreatorLink,
+  LeaderRow,
 } from "@/lib/types";
 
 // Always render fresh so the SSR'd room list reflects the live DB state.
@@ -73,6 +74,58 @@ export default async function SpacePage({
     }));
   }
 
+  // ── Fan leaderboards (overall + weekly) ──
+  const [{ data: topFans }, { data: weeklyRows }, { data: authData }] =
+    await Promise.all([
+      supabase
+        .from("fans")
+        .select("user_id, points, level")
+        .eq("creator_id", creator.id)
+        .order("points", { ascending: false })
+        .limit(20),
+      supabase.rpc("weekly_leaderboard", {
+        cid: creator.id,
+        since: new Date(Date.now() - 7 * 86_400_000).toISOString(),
+      }),
+      supabase.auth.getUser(),
+    ]);
+
+  const overallRaw = (topFans ?? []) as { user_id: string; points: number; level: number }[];
+  const weeklyRaw = (weeklyRows ?? []) as { user_id: string; points: number }[];
+
+  const ids = Array.from(
+    new Set([...overallRaw.map((r) => r.user_id), ...weeklyRaw.map((r) => r.user_id)]),
+  );
+  const profiles: Record<string, { display_name: string; avatar_url: string | null }> = {};
+  if (ids.length) {
+    const { data: us } = await supabase
+      .from("users")
+      .select("id, display_name, avatar_url")
+      .in("id", ids);
+    for (const u of (us ?? []) as { id: string; display_name: string; avatar_url: string | null }[]) {
+      profiles[u.id] = { display_name: u.display_name, avatar_url: u.avatar_url };
+    }
+  }
+  const nameOf = (id: string) => profiles[id]?.display_name ?? "Fan";
+  const avatarOf = (id: string) => profiles[id]?.avatar_url ?? null;
+
+  const leaderOverall: LeaderRow[] = overallRaw.map((r) => ({
+    user_id: r.user_id,
+    display_name: nameOf(r.user_id),
+    avatar_url: avatarOf(r.user_id),
+    points: r.points,
+    level: r.level,
+  }));
+  const leaderWeekly: LeaderRow[] = weeklyRaw.map((r) => ({
+    user_id: r.user_id,
+    display_name: nameOf(r.user_id),
+    avatar_url: avatarOf(r.user_id),
+    points: Number(r.points),
+  }));
+
+  const currentUserId =
+    authData?.user && !authData.user.is_anonymous ? authData.user.id : null;
+
   return (
     <AppShell
       theme={(creator as Creator).theme}
@@ -83,6 +136,9 @@ export default async function SpacePage({
         initialRooms={(rooms ?? []) as Room[]}
         initialPolls={initialPolls}
         links={(linkRows ?? []) as CreatorLink[]}
+        leaderOverall={leaderOverall}
+        leaderWeekly={leaderWeekly}
+        currentUserId={currentUserId}
       />
     </AppShell>
   );

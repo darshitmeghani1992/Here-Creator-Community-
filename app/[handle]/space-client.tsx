@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Creator, Room, CreatorLink, PollState } from "@/lib/types";
+import type { Creator, Room, CreatorLink, PollState, LeaderRow } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/lib/useUser";
 import { usePresenceCount } from "@/lib/usePresence";
@@ -21,6 +21,8 @@ import { JoinSheet } from "@/components/JoinSheet";
 import { CreateRoomSheet } from "@/components/CreateRoomSheet";
 import { LinkButton } from "@/components/LinkButton";
 import { SpacePolls } from "@/components/SpacePolls";
+import { FanStatus } from "@/components/FanStatus";
+import { Leaderboard } from "@/components/Leaderboard";
 import { Toast } from "@/components/Toast";
 
 export function SpaceClient({
@@ -28,11 +30,17 @@ export function SpaceClient({
   initialRooms,
   initialPolls,
   links,
+  leaderOverall,
+  leaderWeekly,
+  currentUserId,
 }: {
   creator: Creator;
   initialRooms: Room[];
   initialPolls: PollState[];
   links: CreatorLink[];
+  leaderOverall: LeaderRow[];
+  leaderWeekly: LeaderRow[];
+  currentUserId: string | null;
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -536,6 +544,16 @@ export function SpaceClient({
               ))}
             </div>
           )}
+        </div>
+
+        {/* ── Fan status + Leaderboard ── */}
+        <div style={{ padding: "20px 18px 0", display: "flex", flexDirection: "column", gap: 12 }}>
+          <FanStatus creatorId={creator.id} handle={creator.handle} />
+          <Leaderboard
+            overall={leaderOverall}
+            weekly={leaderWeekly}
+            currentUserId={currentUserId}
+          />
         </div>
 
         {/* ── Links ── */}
