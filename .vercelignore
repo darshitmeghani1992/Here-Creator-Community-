@@ -1,0 +1,4 @@
+# The native Expo app is a separate frontend (built via EAS, not Vercel).
+# Keep it out of the web app's Vercel deployment so it isn't treated as a
+# monorepo workspace or swept into the Next.js type-check.
+mobile
