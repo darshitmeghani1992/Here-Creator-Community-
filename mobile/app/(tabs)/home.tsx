@@ -2,13 +2,16 @@ import { View } from "react-native";
 import { Screen } from "@/components/Screen";
 import { Text } from "@/components/Text";
 import { MarkCard } from "@/components/MarkCard";
+import { useAuth } from "@/lib/auth";
 import { colors, markColors, spacing } from "@/theme";
 
 /**
- * Home dashboard (Phase 4 fills in the real activity feed). For now it renders
- * the wordmark + a sample mark to exercise the design system end-to-end.
+ * Home dashboard (Phase 4 fills in the real activity feed). Greets the signed-in
+ * user; the sample marks below exercise the design system end-to-end.
  */
 export default function HomeScreen() {
+  const { profile } = useAuth();
+  const firstName = profile?.display_name?.split(" ")[0] ?? "there";
   return (
     <Screen>
       <View
@@ -27,7 +30,7 @@ export default function HomeScreen() {
       </View>
 
       <Text variant="mark" style={{ marginBottom: 6 }}>
-        Good morning, Maya
+        Hey, {firstName}
       </Text>
       <Text variant="body" color={colors.onSurfaceVariant} style={{ marginBottom: 24 }}>
         4 new Marks while you slept

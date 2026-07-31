@@ -24,6 +24,11 @@ Run the DB migration once (Supabase SQL editor or `supabase db push`):
 `../supabase/migrations/0010_walls.sql` — creates the Wall/Mark schema, RLS,
 triggers (auto personal-wall, moderation status), and realtime.
 
+In the shared Supabase project also: enable **Email** (OTP) and optionally
+**Google/Apple** auth providers, add `thewall://auth/callback` as a redirect
+URL, and ensure the public **`attachments`** storage bucket exists (the web app
+already uses it) — avatars and mark photos upload there.
+
 > **Fonts:** drop Bricolage Grotesque / Geist / Space Mono `.ttf` files into
 > `assets/fonts/` and load them via `expo-font` in `app/_layout.tsx`. Until then
 > the app falls back to system fonts.
@@ -42,9 +47,11 @@ src/
 ```
 
 ## Build roadmap (see /root plan for full timeline)
-- **Phase 0 ✅ (this)** — scaffold, design system, core primitives, Supabase
-  client, DB schema + RLS.
-- **Phase 1** — auth & onboarding; auto-create Personal Wall.
+- **Phase 0 ✅** — scaffold, design system, core primitives, Supabase client,
+  DB schema + RLS.
+- **Phase 1 ✅** — auth gate + onboarding (welcome → what-is-a-wall → interests
+  → email/OAuth sign-in → profile setup), auto Personal Wall, empty-wall
+  "invite your crew", profile + sign-out.
 - **Phase 2** — My Wall masonry + all mark renderers + drop animation.
 - **Phase 3** — Create flow + every writer (incl. Skia Doodle canvas).
 - **Phase 4** — friends, Home feed, Discover, Friend Wall, Profile.
