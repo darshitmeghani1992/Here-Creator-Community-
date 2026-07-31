@@ -52,7 +52,9 @@ src/
 - **Phase 1 ✅** — auth gate + onboarding (welcome → what-is-a-wall → interests
   → email/OAuth sign-in → profile setup), auto Personal Wall, empty-wall
   "invite your crew", profile + sign-out.
-- **Phase 2** — My Wall masonry + all mark renderers + drop animation.
+- **Phase 2 ✅** — My Wall hero: 2-column masonry, per-type mark renderers
+  (sticky, roast, secret tap-reveal, memory/photo polaroid, award, poll, doodle,
+  prediction), filter chips, live realtime drop-in of new marks.
 - **Phase 3** — Create flow + every writer (incl. Skia Doodle canvas).
 - **Phase 4** — friends, Home feed, Discover, Friend Wall, Profile.
 - **Phase 5** — reactions/comments, notifications+push, games, moderation, settings.
